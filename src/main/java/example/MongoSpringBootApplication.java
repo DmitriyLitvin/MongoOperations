@@ -64,7 +64,7 @@ public class MongoSpringBootApplication implements ApplicationRunner {
     }
 
     // find projects where all developers did all tasks
-    public List<ProjectStat> getProjectsWithDoneTasks() {
+    public List<ProjectStat> findProjectsWithDoneTasks() {
         TypedAggregation<Project> agg = newAggregation(Project.class,
                 project("projectName", "developers").and("_id").as("projectId"),
                 unwind("developers"),
@@ -81,7 +81,8 @@ public class MongoSpringBootApplication implements ApplicationRunner {
         return mongoTemplate.aggregate(agg, ProjectStat.class).getMappedResults();
     }
 
-    public List<ProjectStat> getProjectsWhereEachDeveloperHasMoreThanTasks(int qty) {
+    // find projects where each developer has more than some qty of tasks
+    public List<ProjectStat> findProjectsWhereEachDeveloperHasMoreThanTasks(int qty) {
         List<AggregationOperation> aggregationOperations = new LinkedList<>();
 
         aggregationOperations.add(project("projectName", "developers").and("_id").as("projectId"));
