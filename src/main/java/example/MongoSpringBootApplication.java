@@ -49,36 +49,35 @@ public class MongoSpringBootApplication implements ApplicationRunner {
 
     //statistics by dev name
     public List<DeveloperStat> getStatsForDeveloper() {
-        TypedAggregation<Developer> agg = newAggregation(Developer.class,
-                unwind("tasks"),
-                project("name", "salary", "tasks").andExpression("tasks.timeStamp + tasks.duration").as("endDates"),
-                group("name").last("name").as("name")
-                        .sum("tasks.storyPoints").as("totalStoryPoints")
-                        .sum("salary").as("totalSalary")
-                        .avg("salary").as("avgSalary")
-                        .push("endDates").as("endDates"),
-                project("name", "totalSalary", "avgSalary", "totalStoryPoints", "endDates")
-        );
+        List<AggregationOperation> aggregationOperations = new LinkedList<>();
+        aggregationOperations.add(unwind("tasks"));
+        aggregationOperations.add(project("name", "salary", "tasks").andExpression("tasks.timeStamp + tasks.duration").as("endDates"));
+        aggregationOperations.add(group("name").last("name").as("name")
+                .sum("tasks.storyPoints").as("totalStoryPoints")
+                .sum("salary").as("totalSalary")
+                .avg("salary").as("avgSalary")
+                .push("endDates").as("endDates"));
+        aggregationOperations.add( project("name", "totalSalary", "avgSalary", "totalStoryPoints", "endDates"));
 
-        return mongoTemplate.aggregate(agg, DeveloperStat.class).getMappedResults();
+        return mongoTemplate.aggregate(newAggregation(Developer.class, aggregationOperations), DeveloperStat.class).getMappedResults();
     }
 
     // find projects where all developers did all tasks
     public List<ProjectStat> findProjectsWithDoneTasks() {
-        TypedAggregation<Project> agg = newAggregation(Project.class,
-                project("projectName", "developers").and("_id").as("projectId"),
-                unwind("developers"),
-                unwind("developers.tasks"),
-                group("projectId").last("projectId").as("projectId")
-                        .push("developers.tasks.isDone").as("taskStatuses")
-                        .first("projectName").as("projectName"),
-                project().andExpression("projectId").as("projectId")
-                        .andExpression("projectName").as("projectName")
-                        .andExpression("taskStatuses").as("taskStatuses"),
-                match(Criteria.where("taskStatuses").not().exists(false))
-        );
+        List<AggregationOperation> aggregationOperations = new LinkedList<>();
 
-        return mongoTemplate.aggregate(agg, ProjectStat.class).getMappedResults();
+        aggregationOperations.add(project("projectName", "developers").and("_id").as("projectId"));
+        aggregationOperations.add(unwind("developers"));
+        aggregationOperations.add(unwind("developers.tasks"));
+        aggregationOperations.add(group("projectId").last("projectId").as("projectId")
+                .push("developers.tasks.isDone").as("taskStatuses")
+                .first("projectName").as("projectName"));
+        aggregationOperations.add(project().andExpression("projectId").as("projectId")
+                .andExpression("projectName").as("projectName")
+                .andExpression("taskStatuses").as("taskStatuses"));
+        aggregationOperations.add(match(Criteria.where("taskStatuses").not().exists(false)));
+
+        return mongoTemplate.aggregate(newAggregation(Project.class, aggregationOperations), ProjectStat.class).getMappedResults();
     }
 
     // find projects where each developer has more than some qty of tasks
