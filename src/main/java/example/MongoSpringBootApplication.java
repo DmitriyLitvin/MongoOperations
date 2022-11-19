@@ -56,7 +56,7 @@ public class MongoSpringBootApplication implements ApplicationRunner {
                         .sum("tasks.storyPoints").as("totalStoryPoints")
                         .sum("salary").as("totalSalary")
                         .avg("salary").as("avgSalary")
-                        .addToSet("endDates").as("endDates"),
+                        .push("endDates").as("endDates"),
                 project("name", "totalSalary", "avgSalary", "totalStoryPoints", "endDates")
         );
 
@@ -70,7 +70,7 @@ public class MongoSpringBootApplication implements ApplicationRunner {
                 unwind("developers"),
                 unwind("developers.tasks"),
                 group("projectId").last("projectId").as("projectId")
-                        .addToSet("developers.tasks.isDone").as("taskStatuses")
+                        .push("developers.tasks.isDone").as("taskStatuses")
                         .first("projectName").as("projectName"),
                 project().andExpression("projectId").as("projectId")
                         .andExpression("projectName").as("projectName")
